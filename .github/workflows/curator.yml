@@ -1,0 +1,45 @@
+name: Daily English Bot for Kids
+
+on:
+  schedule:
+    - cron: '0 23 * * *'   # 06:00 AM GMT+7 (11:00 PM UTC)
+  workflow_dispatch:      # Allows manual trigger from GitHub UI
+
+permissions:
+  contents: write         # Required to allow committing back sent_urls.txt
+
+jobs:
+  send-daily-lesson:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run daily curator bot
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ secrets.GEMINI_MODEL || 'gemini-2.0-flash' }}
+          ZALO_BOT_TOKEN: ${{ secrets.ZALO_BOT_TOKEN }}
+          ZALO_CHAT_ID: ${{ secrets.ZALO_CHAT_ID }}
+        run: uv run python main.py
+
+      - name: Commit & Push sent_urls.txt state changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add sent_urls.txt
+          # Only commit if there are differences to avoid workflow failure
+          if ! git diff --staged --quiet; then
+            git commit -m "chore: update sent_urls [skip ci]"
+            git push
+          else
+            echo "No new URLs sent. Skipping commit."
+          fi
