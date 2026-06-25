@@ -53,7 +53,7 @@ def curate_article(candidates: list[dict], weekly_topic: str, mock: bool = False
         }
 
     api_key = os.environ.get("GEMINI_API_KEY")
-    model_name = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+    model_name = os.environ.get("GEMINI_MODEL", "gemini-2.5-pro")
     
     if not api_key:
         logger.error("GEMINI_API_KEY is not set in environment variables.")
@@ -84,19 +84,16 @@ For each level:
   List ONLY the bare words — no definitions, no phonetics, no translations, no examples.
 - phrases: Exactly 5 useful expressions, collocations, or phrases from the article at this level (a mix of verb phrases, noun phrases, adjectives, etc., to help kids learn word combinations).
   List ONLY the phrases — no explanation, no translation.
-- passage: A short, engaging reading passage (60-120 words) that rewrites the selected news article at this level, naturally incorporating all 5 vocab_words and all 5 phrases.
-  - Level 1: Very simple sentences, common words only. For young beginners.
-  - Level 2: Slightly more complex sentences, some new vocabulary. For intermediate learners.
-  - Level 3: Close to original news style. For advanced young readers.
+- passage: A short, engaging reading passage (60-120 words) that"""
 
-CRITICAL RULES:
-- DO NOT explain any word or phrase. No definitions. No translations. No phonetics.
-- The passage must read naturally as a news rewrite while embedding the selected vocabulary words and phrases.
-- Keep all three levels clearly distinct in complexity.
-
-Candidate Articles:
-{articles_text}
-"""
+def generate_motivation_quote(mock: bool = False) -> str:
+    """Generates a calm motivational quote for daily workout reminders."""
+    # Always return a static quote; LLM API calls removed as per requirements.
+    if mock:
+        logger.info("Using mock motivation quote.")
+        return "\"Không cần hoàn hảo, chỉ cần không bỏ.\""
+    # Fallback static quote
+    return "\"Không cần hoàn hảo, chỉ cần không bỏ.\""
 
     logger.info(f"Invoking Gemini Model '{model_name}' to curate article...")
     

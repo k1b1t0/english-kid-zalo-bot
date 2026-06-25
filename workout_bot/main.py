@@ -4,7 +4,6 @@ import os
 import logging
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
-from google import genai
 
 # Add project root to sys.path to allow importing from shared
 root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -88,41 +87,12 @@ WEEKDAY_NAMES = {
 }
 
 def generate_motivation_quote(mock: bool = False) -> str:
-    """Generates a calm motivational quote from Gemini focused on consistency and habit building."""
+    """Generates a static motivational quote for daily workout reminders."""
     if mock:
         logger.info("Using mock motivation quote.")
-        return '"Không cần hoàn hảo, chỉ cần không bỏ."'
-        
-    api_key = os.environ.get("GEMINI_API_KEY")
-    model_name = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
-    
-    if not api_key:
-        logger.warning("GEMINI_API_KEY is not set. Using fallback quote.")
-        return '"Không cần hoàn hảo, chỉ cần không bỏ."'
-        
-    prompt = """Hãy tạo một câu trích dẫn ngắn (quote) bằng tiếng Việt để tạo động lực duy trì thói quen tập luyện hàng ngày.
-Yêu cầu:
-- Hướng đến việc duy trì thói quen bền bỉ, không cần sự đột phá hay quá đà, tập trung vào tính đều đặn, kiên trì ("không cần hoàn hảo, chỉ cần không bỏ").
-- Câu ngắn gọn, súc tích (dưới 20 từ).
-- Ngôn ngữ tiếng Việt tự nhiên, tone giọng bình thản, nhẹ nhàng, không đao to búa lớn.
-- Chỉ trả về duy nhất nội dung câu trích dẫn trong dấu ngoặc kép, không thêm bất kỳ văn bản giải thích nào khác.
-"""
-    
-    logger.info(f"Invoking Gemini Model '{model_name}' to generate motivation quote...")
-    try:
-        client = genai.Client(api_key=api_key)
-        response = client.models.generate_content(
-            model=model_name,
-            contents=prompt,
-        )
-        quote = response.text.strip()
-        # Ensure quote is enclosed in quotation marks
-        if not (quote.startswith('"') and quote.endswith('"')) and not (quote.startswith('“') and quote.endswith('”')):
-            quote = f'"{quote}"'
-        return quote
-    except Exception as e:
-        logger.error(f"Failed to generate quote from Gemini: {e}")
-        return '"Không cần hoàn hảo, chỉ cần không bỏ."'
+        return "\"Không cần hoàn hảo, chỉ cần không bỏ.\""
+    # Return static quote
+    return "\"Không cần hoàn hảo, chỉ cần không bỏ.\""
 
 def build_workout_message(weekday: int, date_str: str, quote: str) -> str:
     """Builds the workout reminder message text."""

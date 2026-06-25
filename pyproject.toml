@@ -1,5 +1,5 @@
 [project]
-name = "daily-english-bot"
+name = "zalo-bot"
 version = "0.1.0"
 description = "Daily English Learning Bot for Vietnamese Children via Zalo"
 readme = "README.md"
