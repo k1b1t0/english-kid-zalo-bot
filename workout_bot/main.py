@@ -2,6 +2,7 @@ import argparse
 import sys
 import os
 import logging
+import random
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 
@@ -87,15 +88,26 @@ WEEKDAY_NAMES = {
 }
 
 def generate_motivation_quote(mock: bool = False) -> str:
-    """Generates a static motivational quote for daily workout reminders."""
+    """Generates a random motivational quote from quotes.txt."""
     if mock:
         logger.info("Using mock motivation quote.")
         return "\"Không cần hoàn hảo, chỉ cần không bỏ.\""
-    # Return static quote
-    return "\"Không cần hoàn hảo, chỉ cần không bỏ.\""
+    quotes_path = os.path.join(os.path.dirname(__file__), "quotes.txt")
+    if not os.path.exists(quotes_path):
+        logger.warning(f"Quotes file not found at {quotes_path}. Using fallback.")
+        return "\"Không cần hoàn hảo, chỉ cần không bỏ.\""
+    try:
+        with open(quotes_path, "r", encoding="utf-8") as f:
+            quotes = [line.strip() for line in f if line.strip()]
+        if not quotes:
+            return "\"Không cần hoàn hảo, chỉ cần không bỏ.\""
+        return random.choice(quotes)
+    except Exception as e:
+        logger.error(f"Error reading quotes file: {e}")
+        return "\"Không cần hoàn hảo, chỉ cần không bỏ.\""
 
 def build_workout_message(weekday: int, date_str: str, quote: str) -> str:
-    """Builds the workout reminder message text."""
+    """Builds the workout reminder message text with quote at the top."""
     header = f"🌅 5:00 SA — {WEEKDAY_NAMES[weekday]}, {date_str}"
     
     # 1. Workout Session
@@ -138,8 +150,8 @@ def build_workout_message(weekday: int, date_str: str, quote: str) -> str:
     # 3. Tracking Section
     tracking_section = f"📊 Tracking: {TRACKING_URL}"
     
-    # Combine all parts
-    message = f"{header}\n\n{workout_section}\n\n{daily_section}\n\n{tracking_section}\n\n✨ {quote}"
+    # Combine all parts (putting quote at the top)
+    message = f"{header}\n\n✨ {quote}\n\n{workout_section}\n\n{daily_section}\n\n{tracking_section}"
     return message
 
 def main():

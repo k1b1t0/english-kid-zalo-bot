@@ -53,8 +53,6 @@ def curate_article(candidates: list[dict], weekly_topic: str, mock: bool = False
         }
 
     api_key = os.environ.get("GEMINI_API_KEY")
-    model_name = os.environ.get("GEMINI_MODEL", "gemini-2.5-pro")
-    
     if not api_key:
         logger.error("GEMINI_API_KEY is not set in environment variables.")
         return None
@@ -84,13 +82,76 @@ For each level:
   List ONLY the bare words — no definitions, no phonetics, no translations, no examples.
 - phrases: Exactly 5 useful expressions, collocations, or phrases from the article at this level (a mix of verb phrases, noun phrases, adjectives, etc., to help kids learn word combinations).
   List ONLY the phrases — no explanation, no translation.
-- passage: A short, engaging reading passage (60-120 words) that"""
+- passage: A short, engaging reading passage (60-120 words) that rewrites the selected news article at this level, naturally incorporating all 5 vocab_words and all 5 phrases.
+  - Level 1: Very simple sentences, common words only. For young beginners.
+  - Level 2: Slightly more complex sentences, some new vocabulary. For intermediate learners.
+  - Level 3: Close to original news style. For advanced young readers.
 
-def generate_motivation_quote(mock: bool = False) -> str:
-    """Generates a calm motivational quote for daily workout reminders."""
-    # Always return a static quote; LLM API calls removed as per requirements.
-    if mock:
-        logger.info("Using mock motivation quote.")
-        return "\"Không cần hoàn hảo, chỉ cần không bỏ.\""
-    # Fallback static quote
-    return "\"Không cần hoàn hảo, chỉ cần không bỏ.\""
+CRITICAL RULES:
+- DO NOT explain any word or phrase. No definitions. No translations. No phonetics.
+- The passage must read naturally as a news rewrite while embedding the selected vocabulary words and phrases.
+- Keep all three levels clearly distinct in complexity.
+
+Candidate Articles:
+{articles_text}
+"""
+
+    # Determine models list starting from GEMINI_MODEL down to fallbacks
+    env_model = os.environ.get("GEMINI_MODEL")
+    priority_fallbacks = [
+        "gemini-2.5-pro",
+        "gemini-2.5-flash",
+        "gemma-4-31b-it",
+        "gemma-4-26b-a4b-it"
+    ]
+    
+    models_to_try = []
+    if env_model:
+        models_to_try.append(env_model)
+    for model in priority_fallbacks:
+        if model not in models_to_try:
+            models_to_try.append(model)
+
+    logger.info(f"Models to try in order: {models_to_try}")
+
+    for model_name in models_to_try:
+        # We try 2 attempts per model (first try, then wait 1 min and retry 1 time)
+        for attempt in range(2):
+            logger.info(f"Attempting curation with model '{model_name}' (Attempt {attempt + 1}/2)...")
+            try:
+                client = genai.Client(api_key=api_key)
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=system_prompt,
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        response_schema=CuratedArticle,
+                        temperature=0.7,
+                    )
+                )
+                
+                if not response.text:
+                    raise ValueError("Empty response text from Gemini API")
+                    
+                # Parse & validate response
+                result_json = json.loads(response.text)
+                # Basic validation of schema structure
+                if "title" in result_json and "url" in result_json and "levels" in result_json:
+                    logger.info(f"Gemini curation successful! Selected article: '{result_json['title']}' using model '{model_name}'")
+                    return result_json
+                else:
+                    raise ValueError("Invalid structure in Gemini response JSON")
+                    
+            except Exception as e:
+                logger.warning(f"Attempt {attempt + 1} with model '{model_name}' failed: {e}")
+                if attempt == 0:
+                    logger.info("Waiting 60 seconds (1 minute) before retrying this model...")
+                    time.sleep(60)
+                else:
+                    logger.warning(f"Model '{model_name}' failed after retry.")
+                    
+        # If we reach here, both attempts on model_name failed. It will proceed to next model in loop.
+        logger.info(f"Moving to next fallback model due to failures with '{model_name}'...")
+
+    logger.error("All models in list failed. Gemini curation returned no results.")
+    return None
